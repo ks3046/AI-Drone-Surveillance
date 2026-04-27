@@ -22,7 +22,7 @@ criterion = nn.CrossEntropyLoss(weight=weights)
 
 
 # =========================
-# 🔥 ALIGNMENT
+# ALIGNMENT
 # =========================
 def align_audio_to_video(a, target_len):
     return F.interpolate(
@@ -34,7 +34,7 @@ def align_audio_to_video(a, target_len):
 
 
 # =========================
-# 🔥 MIL + HARD NEGATIVE
+#  MIL + HARD NEGATIVE
 # =========================
 def mil_loss(logits, labels, k_ratio=0.1, hard_ratio=0.5):
 
@@ -60,7 +60,7 @@ def mil_loss(logits, labels, k_ratio=0.1, hard_ratio=0.5):
         normal_scores = video_scores[normal_idx]
         abnormal_scores = video_scores[abnormal_idx]
 
-        # 🔥 Hard negatives
+        #  Hard negatives
         num_hard = max(1, int(len(normal_scores) * hard_ratio))
         hard_normals, _ = torch.topk(normal_scores, num_hard)
 
@@ -71,7 +71,7 @@ def mil_loss(logits, labels, k_ratio=0.1, hard_ratio=0.5):
 
 
 # =========================
-# 🔥 CONTRASTIVE LOSS
+#  CONTRASTIVE LOSS
 # =========================
 def contrastive_loss(v, a, temperature=0.07):
 
@@ -91,7 +91,7 @@ def contrastive_loss(v, a, temperature=0.07):
 
 
 # =========================
-# 🔥 PSEUDO LABELS
+#  PSEUDO LABELS
 # =========================
 def generate_pseudo_labels(logits, labels, threshold=0.6):
 
@@ -117,7 +117,7 @@ def frame_loss(logits, pseudo_labels):
 
 
 # =========================
-# 🔥 ATTENTION VIS
+#  ATTENTION VIS
 # =========================
 def plot_attention(attn_map, title="Attention"):
 
@@ -143,7 +143,7 @@ def train_one_epoch(loader, epoch):
 
         v, a, y = v.to(device), a.to(device), y.to(device)
 
-        # 🔥 ALIGNMENT
+        #  ALIGNMENT
         a = align_audio_to_video(a, v.shape[1])
 
         logits, attn_v, attn_a = model(v, a)
@@ -153,7 +153,7 @@ def train_one_epoch(loader, epoch):
 
         loss = mil + 0.05 * contr
 
-        # 🔥 PSEUDO LABELS AFTER WARMUP
+        #  PSEUDO LABELS AFTER WARMUP
         if epoch > 5:
             pseudo = generate_pseudo_labels(logits.detach(), y)
             frame = frame_loss(logits, pseudo)
@@ -192,7 +192,7 @@ def validate(loader, epoch):
             probs = torch.softmax(logits, dim=-1)
             anomaly_score = 1 - probs[:, :, 0]
 
-            # 🔥 smoothing
+            # smoothing
             anomaly_score = F.avg_pool1d(
                 anomaly_score.unsqueeze(1),
                 kernel_size=5,
@@ -200,7 +200,7 @@ def validate(loader, epoch):
                 padding=2
             ).squeeze(1)
 
-            # 🔥 top-k scoring
+            #  top-k scoring
             k = max(1, int(anomaly_score.shape[1] * 0.1))
             topk, _ = torch.topk(anomaly_score, k, dim=1)
             score = topk.mean(dim=1)
@@ -208,7 +208,7 @@ def validate(loader, epoch):
             all_scores.extend(score.cpu().numpy())
             all_labels.extend((y != 0).numpy())
 
-            # 🔥 visualize occasionally
+            #  visualize occasionally
             if epoch % 5 == 0:
                 plot_attention(attn_v, "Video attends Audio")
 
